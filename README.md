@@ -7,7 +7,8 @@
 - 沙盒隔离（安全优先）：所有代码执行都在 Docker 容器内，保护宿主机免受潜在危险代码影响。  
 - 权威知识对齐：预先注入 CadQuery 官方文档与示例，显著降低 LLM 产生“幻觉”的概率，保证 API 调用的准确性。  
 - 工程化 Prompt & SOP：内置工程哲学与作业流程（SOP），使输出具有一致性、可复现性与可审计性。  
-- 面向修改与协作：生成的 CAD 代码遵循模块化和可维护的风格，便于后续人工审查与团队协作。
+- 面向修改与协作：生成的 CAD 代码遵循模块化和可维护的风格，便于后续人工审查与团队协作。  
+- 标准零件库集成：已导入 cq_warehouse 标准零件库，包含常用标准件与参数化零件（如螺栓、螺母、销钉等），可直接在生成脚本中调用，极大提升组装与建模效率。
 
 ---
 
@@ -39,6 +40,13 @@ User → Cherry Studio → LLM(DeepSeek) → MCP Tools (read/write/run/bash) →
 - 安装 Cherry Studio（本项目在 Cherry Studio 中运行/集成）  
 - 安装 Docker（用于沙盒执行）  
 - 获取 DeepSeek API Key 或其他 LLM Key（用于推理/生成）
+
+依赖与标准零件库
+- 本项目已集成 cq_warehouse 标准零件库，用于快速调用常用标准件与参数化零件，帮助你更快完成装配与验证。  
+- 安装/导入方式示例：请参照项目内 docs 或直接在执行环境中通过 pip/源码安装该库（不同环境可能略有差异）。  
+- 在 CadQuery 脚本中可直接引用库中的零件，例如：
+  - from cq_warehouse.fasteners import MetricBolt  # 示例（具体模块名请参见 cq_warehouse 文档）
+  - bolt = MetricBolt(diameter=4, length=16)
 
 配置与启动（示例）
 1. 克隆仓库  
