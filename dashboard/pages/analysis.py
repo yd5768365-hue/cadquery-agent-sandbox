@@ -2,8 +2,15 @@ import streamlit as st
 import sys
 import os
 
+# 切换到项目根目录
+os.chdir('/app')
+
+# 确保Python路径包含必要的目录
+if '/app' not in sys.path:
+    sys.path.insert(0, '/app')
+
 from server.data_collector import SimulationDataCollector
-from dashboard.components.charts import *
+from components.charts import *
 import pandas as pd
 import numpy as np
 

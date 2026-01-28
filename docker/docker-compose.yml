@@ -164,9 +164,9 @@ services:
       - "8501:8501"
     volumes:
       - ../dashboard:/app
-      - ../server:/server
-      - ../ml:/ml
-      - ../services:/services
+      - ../server:/app/server
+      - ../ml:/app/ml
+      - ../services:/app/services
       - ../test:/data
     environment:
       - DATABASE_URL=postgresql://cae_user:cae_pass_2024@postgres:5432/cae_platform
