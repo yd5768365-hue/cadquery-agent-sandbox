@@ -1,0 +1,58 @@
+# 代理模型配置
+surrogate_model:
+  type: random_forest
+  n_estimators: 100
+  max_depth: 20
+  min_samples_split: 5
+  test_size: 0.2
+  random_state: 42
+  
+  # 训练配置
+  training:
+    min_samples: 50
+    retrain_interval_days: 1
+    auto_train: true
+  
+  # 预测配置
+  prediction:
+    confidence_threshold: 0.8
+    use_uncertainty: true
+
+# 几何编码器配置
+geometry_encoder:
+  resolution: 64
+  feature_dim: 128
+  model_type: simple_3dcnn
+  
+  training:
+    epochs: 50
+    batch_size: 8
+    learning_rate: 0.001
+
+# 向量数据库配置
+vector_database:
+  feature_dim: 128
+  index_type: flat_l2
+  similarity_threshold: 0.8
+
+# 可视化配置
+visualization:
+  default_colormap: jet
+  window_size: [1920, 1080]
+  dpi: 150
+  
+  stress:
+    colormap: jet
+    show_edges: false
+  
+  displacement:
+    colormap: viridis
+    scale_factor: 10.0
+    show_original: true
+
+# 任务队列配置
+task_queue:
+  broker_url: redis://redis:6379/0
+  result_backend: redis://redis:6379/0
+  worker_concurrency: 4
+  task_time_limit: 3600

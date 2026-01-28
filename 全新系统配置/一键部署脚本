@@ -1,0 +1,403 @@
+# scripts/setup.sh
+#!/bin/bash
+# 一键部署脚本
+
+echo "================================"
+echo "CAE 自动化平台 - 一键部署"
+echo "================================"
+
+# 检查 Docker
+if ! command -v docker &> /dev/null; then
+    echo "❌ Docker 未安装，请先安装 Docker Desktop"
+    exit 1
+fi
+
+echo "✓ Docker 已安装"
+
+# 检查 Docker Compose
+if ! command -v docker-compose &> /dev/null; then
+    echo "❌ Docker Compose 未安装"
+    exit 1
+fi
+
+echo "✓ Docker Compose 已安装"
+
+# 创建目录结构
+echo ""
+echo "📁 创建目录结构..."
+
+BASE_DIR="E:/DeepSeek_Work"
+
+mkdir -p "$BASE_DIR/docker"
+mkdir -p "$BASE_DIR/server"
+mkdir -p "$BASE_DIR/ml/models"
+mkdir -p "$BASE_DIR/ml/trainers"
+mkdir -p "$BASE_DIR/ml/data"
+mkdir -p "$BASE_DIR/dashboard/pages"
+mkdir -p "$BASE_DIR/dashboard/components"
+mkdir -p "$BASE_DIR/services"
+mkdir -p "$BASE_DIR/config"
+mkdir -p "$BASE_DIR/scripts"
+mkdir -p "$BASE_DIR/test/input"
+mkdir -p "$BASE_DIR/test/parts"
+mkdir -p "$BASE_DIR/test/meshes"
+mkdir -p "$BASE_DIR/test/analyses"
+mkdir -p "$BASE_DIR/test/results"
+mkdir -p "$BASE_DIR/test/visualizations"
+
+echo "✓ 目录结构创建完成"
+
+# 构建镜像
+echo ""
+echo "🐳 构建 Docker 镜像..."
+
+cd "$BASE_DIR/docker"
+
+# 构建各个服务
+docker-compose build
+
+if [ $? -ne 0 ]; then
+    echo "❌ 镜像构建失败"
+    exit 1
+fi
+
+echo "✓ 镜像构建完成"
+
+# 启动服务
+echo ""
+echo "🚀 启动服务..."
+
+docker-compose up -d
+
+if [ $? -ne 0 ]; then
+    echo "❌ 服务启动失败"
+    exit 1
+fi
+
+echo "✓ 服务启动成功"
+
+# 等待服务就绪
+echo ""
+echo "⏳ 等待服务就绪..."
+sleep 10
+
+# 检查服务状态
+echo ""
+echo "🔍 检查服务状态..."
+
+docker-compose ps
+
+# 初始化数据库
+echo ""
+echo "💾 初始化数据库..."
+
+python3 << EOF
+import sys
+sys.path.append('$BASE_DIR')
+from server.data_collector import SimulationDataCollector
+
+collector = SimulationDataCollector()
+print("✓ 数据库初始化完成")
+EOF
+
+# 显示访问信息
+echo ""
+echo "================================"
+echo "✅ 部署完成！"
+echo "================================"
+echo ""
+echo "服务访问地址："
+echo "  - 数字孪生仪表盘: http://localhost:8501"
+echo "  - Celery 监控 (Flower): http://localhost:5555"
+echo "  - Redis: localhost:6379"
+echo "  - PostgreSQL: localhost:5432"
+echo ""
+echo "后续步骤："
+echo "  1. 启动 MCP 服务器: python server/server.py"
+echo "  2. 配置 Cherry Studio 连接到 MCP"
+echo "  3. 访问仪表盘查看系统状态"
+echo ""
+echo "管理命令："
+echo "  - 查看日志: docker-compose logs -f [服务名]"
+echo "  - 停止服务: docker-compose down"
+echo "  - 重启服务: docker-compose restart"
+echo ""
+
+
+# scripts/start_all.sh
+#!/bin/bash
+# 启动所有服务
+
+echo "🚀 启动 CAE 自动化平台..."
+
+cd E:/DeepSeek_Work/docker
+
+# 启动 Docker 服务
+docker-compose up -d
+
+echo "✓ Docker 服务已启动"
+
+# 启动 MCP 服务器（后台）
+cd E:/DeepSeek_Work
+nohup python server/server.py > server.log 2>&1 &
+
+echo "✓ MCP 服务器已启动"
+
+echo ""
+echo "所有服务已启动！"
+echo "访问 http://localhost:8501 查看仪表盘"
+
+
+# scripts/stop_all.sh
+#!/bin/bash
+# 停止所有服务
+
+echo "🛑 停止 CAE 自动化平台..."
+
+# 停止 MCP 服务器
+pkill -f "python server/server.py"
+
+echo "✓ MCP 服务器已停止"
+
+# 停止 Docker 服务
+cd E:/DeepSeek_Work/docker
+docker-compose down
+
+echo "✓ Docker 服务已停止"
+
+echo ""
+echo "所有服务已停止"
+
+
+# docker/gmsh.Dockerfile
+"""
+Gmsh 服务 Dockerfile
+"""
+
+FROM python:3.10-slim
+
+# 配置阿里云镜像
+RUN echo "deb http://mirrors.aliyun.com/debian/ bookworm main contrib non-free" > /etc/apt/sources.list
+
+# 安装 Gmsh
+RUN apt-get update && apt-get install -y \
+    gmsh \
+    libgl1-mesa-glx \
+    libglu1-mesa \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 Python 包
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    numpy \
+    gmsh
+
+WORKDIR /app
+
+ENV OMP_NUM_THREADS=4
+
+CMD ["tail", "-f", "/dev/null"]
+
+
+# docker/calculix.Dockerfile
+"""
+CalculiX 服务 Dockerfile
+"""
+
+FROM python:3.10-slim
+
+# 配置阿里云镜像
+RUN echo "deb http://mirrors.aliyun.com/debian/ bookworm main contrib non-free" > /etc/apt/sources.list
+
+# 安装 CalculiX
+RUN apt-get update && apt-get install -y \
+    calculix-ccx \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV OMP_NUM_THREADS=8
+
+CMD ["tail", "-f", "/dev/null"]
+
+
+# docker/ml.Dockerfile
+"""
+ML 服务 Dockerfile
+"""
+
+FROM python:3.10
+
+# 安装 PyTorch 和 ML 库
+RUN pip install --no-cache-dir \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    scikit-learn \
+    joblib \
+    faiss-cpu \
+    numpy \
+    pandas
+
+# 可选：如果有 GPU
+# RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+WORKDIR /app
+
+CMD ["tail", "-f", "/dev/null"]
+
+
+# docker/server.Dockerfile
+"""
+Server/Celery Dockerfile
+"""
+
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# 安装依赖
+RUN apt-get update && apt-get install -y \
+    docker.io \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 Python 包
+RUN pip install --no-cache-dir \
+    celery[redis] \
+    flower \
+    psycopg2-binary \
+    sqlalchemy \
+    numpy \
+    pandas
+
+COPY . /app
+
+CMD ["celery", "-A", "tasks", "worker", "--loglevel=info"]
+
+
+# scripts/backup.sh
+#!/bin/bash
+# 数据备份脚本
+
+echo "💾 开始备份..."
+
+BACKUP_DIR="E:/DeepSeek_Work/backups/$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$BACKUP_DIR"
+
+# 备份数据库
+echo "备份数据库..."
+docker exec cae_postgres pg_dump -U cae_user cae_platform > "$BACKUP_DIR/database.sql"
+
+# 备份仿真历史
+echo "备份仿真历史..."
+cp E:/DeepSeek_Work/ml/data/simulation_history.db "$BACKUP_DIR/"
+
+# 备份模型
+echo "备份模型..."
+cp -r E:/DeepSeek_Work/ml/models/*.pkl "$BACKUP_DIR/" 2>/dev/null
+
+# 备份配置
+echo "备份配置..."
+cp -r E:/DeepSeek_Work/config "$BACKUP_DIR/"
+
+echo "✓ 备份完成: $BACKUP_DIR"
+
+
+# scripts/health_check.sh
+#!/bin/bash
+# 健康检查脚本
+
+echo "🏥 系统健康检查..."
+
+# 检查 Docker 服务
+echo ""
+echo "检查 Docker 服务:"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# 检查 Redis
+echo ""
+echo "检查 Redis:"
+docker exec cae_redis redis-cli ping
+
+# 检查 PostgreSQL
+echo ""
+echo "检查 PostgreSQL:"
+docker exec cae_postgres pg_isready -U cae_user
+
+# 检查 Celery Worker
+echo ""
+echo "检查 Celery Worker:"
+docker exec cae_celery_worker celery -A tasks inspect active
+
+# 检查磁盘空间
+echo ""
+echo "检查磁盘空间:"
+df -h E:/DeepSeek_Work
+
+echo ""
+echo "✓ 健康检查完成"
+
+
+# scripts/update_system.sh
+#!/bin/bash
+# 系统更新脚本
+
+echo "🔄 更新系统..."
+
+cd E:/DeepSeek_Work
+
+# 拉取最新代码（如果使用 Git）
+# git pull
+
+# 重建镜像
+echo "重建 Docker 镜像..."
+cd docker
+docker-compose build --no-cache
+
+# 重启服务
+echo "重启服务..."
+docker-compose down
+docker-compose up -d
+
+# 更新 Python 依赖
+echo "更新 Python 依赖..."
+pip install --upgrade -r requirements.txt
+
+echo "✓ 更新完成"
+
+
+# requirements.txt
+"""
+Python 依赖包列表
+"""
+
+# 核心框架
+celery[redis]==5.3.4
+flower==2.0.1
+streamlit==1.29.0
+
+# 数据库
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+redis==5.0.1
+
+# 机器学习
+torch==2.1.2
+scikit-learn==1.3.2
+joblib==1.3.2
+faiss-cpu==1.7.4
+
+# 可视化
+pyvista==0.43.1
+plotly==5.18.0
+matplotlib==3.8.2
+
+# 数据处理
+numpy==1.26.2
+pandas==2.1.4
+
+# CAD/CAE
+cadquery==2.4.0
+gmsh
+
+# 工具
+tqdm==4.66.1
+Pillow==10.1.0
+imageio==2.33.1
