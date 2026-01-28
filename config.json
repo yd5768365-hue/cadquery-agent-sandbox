@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "cae-assembly-server": {
+      "command": "python",
+      "args": ["E:\\DeepSeek_Work\\server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  },
+  "description": "复杂装配体 CAE 自动化 MCP 服务器配置"
+}

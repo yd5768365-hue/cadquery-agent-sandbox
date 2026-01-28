@@ -1,0 +1,369 @@
+# server/tasks.py
+"""
+Celery 任务队列系统
+功能：并行处理多个仿真任务
+"""
+
+from celery import Celery, group, chain
+from celery.result import AsyncResult
+import time
+import json
+from pathlib import Path
+
+# 配置 Celery
+app = Celery(
+    'cae_tasks',
+    broker='redis://redis:6379/0',
+    backend='redis://redis:6379/0'
+)
+
+# Celery 配置
+app.conf.update(
+    task_serializer='json',
+    accept_content=['json'],
+    result_serializer='json',
+    timezone='Asia/Shanghai',
+    enable_utc=True,
+    task_track_started=True,
+    task_time_limit=3600,  # 1小时超时
+    worker_prefetch_multiplier=1,
+    worker_max_tasks_per_child=10
+)
+
+# ==================== 基础任务 ====================
+
+@app.task(bind=True, name='tasks.mesh_generation')
+def mesh_generation_task(self, part_path, analysis_type='stress', params=None):
+    """网格生成任务"""
+    self.update_state(state='PROGRESS', meta={'status': 'Starting mesh generation'})
+    
+    try:
+        # 这里调用实际的网格生成逻辑
+        import subprocess
+        
+        params = params or {}
+        clmax = params.get('clmax', 5.0)
+        clmin = params.get('clmin', 0.5)
+        
+        output_mesh = part_path.replace('.step', '.msh')
+        
+        cmd = [
+            'docker', 'exec', 'cae_gmsh',
+            'gmsh', part_path, '-3',
+            '-clmax', str(clmax),
+            '-clmin', str(clmin),
+            '-optimize',
+            '-o', output_mesh
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        
+        if result.returncode == 0:
+            return {
+                'status': 'completed',
+                'mesh_file': output_mesh,
+                'stdout': result.stdout,
+                'params': params
+            }
+        else:
+            return {
+                'status': 'failed',
+                'error': result.stderr,
+                'params': params
+            }
+    
+    except Exception as e:
+        return {
+            'status': 'failed',
+            'error': str(e),
+            'params': params
+        }
+
+@app.task(bind=True, name='tasks.analysis')
+def analysis_task(self, inp_file, analysis_type='stress'):
+    """分析任务"""
+    self.update_state(state='PROGRESS', meta={'status': 'Running analysis'})
+    
+    try:
+        import subprocess
+        
+        base_name = inp_file.replace('.inp', '')
+        
+        cmd = [
+            'docker', 'exec', 'cae_calculix',
+            'ccx', base_name
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+        
+        if result.returncode == 0:
+            return {
+                'status': 'completed',
+                'result_file': base_name + '.frd',
+                'dat_file': base_name + '.dat',
+                'stdout': result.stdout
+            }
+        else:
+            return {
+                'status': 'failed',
+                'error': result.stderr
+            }
+    
+    except Exception as e:
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+@app.task(bind=True, name='tasks.visualization')
+def visualization_task(self, frd_file, output_dir):
+    """可视化任务"""
+    self.update_state(state='PROGRESS', meta={'status': 'Generating visualizations'})
+    
+    try:
+        import sys
+        sys.path.append('/app')
+        from services.viz_service import VisualizationService
+        
+        viz = VisualizationService()
+        
+        results = {}
+        
+        # 应力云图
+        stress_result = viz.visualize_stress(
+            frd_file,
+            f"{output_dir}/stress.png"
+        )
+        results['stress'] = stress_result
+        
+        # 位移云图
+        disp_result = viz.visualize_displacement(
+            frd_file,
+            f"{output_dir}/displacement.png",
+            scale_factor=10.0
+        )
+        results['displacement'] = disp_result
+        
+        return {
+            'status': 'completed',
+            'results': results
+        }
+    
+    except Exception as e:
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+# ==================== 复合任务 ====================
+
+@app.task(name='tasks.complete_analysis_pipeline')
+def complete_analysis_pipeline(part_path, analysis_type='stress', mesh_params=None):
+    """完整分析流程（串行）"""
+    
+    # 创建任务链
+    workflow = chain(
+        mesh_generation_task.s(part_path, analysis_type, mesh_params),
+        analysis_task.s(analysis_type),
+        visualization_task.s(f"/data/results/{Path(part_path).stem}")
+    )
+    
+    return workflow.apply_async()
+
+@app.task(name='tasks.batch_mesh_generation')
+def batch_mesh_generation(part_paths, analysis_type='stress', mesh_params=None):
+    """批量网格生成（并行）"""
+    
+    # 创建任务组
+    jobs = group(
+        mesh_generation_task.s(path, analysis_type, mesh_params)
+        for path in part_paths
+    )
+    
+    return jobs.apply_async()
+
+@app.task(name='tasks.parametric_study')
+def parametric_study(base_geometry, param_ranges, analysis_type='stress'):
+    """参数化研究（并行）"""
+    
+    tasks = []
+    
+    # 生成参数组合
+    import itertools
+    
+    param_names = list(param_ranges.keys())
+    param_values = list(param_ranges.values())
+    
+    for combination in itertools.product(*param_values):
+        params = dict(zip(param_names, combination))
+        
+        # 为每个参数组合创建任务
+        task = complete_analysis_pipeline.s(
+            base_geometry,
+            analysis_type,
+            params
+        )
+        tasks.append(task)
+    
+    # 并行执行
+    job = group(tasks)
+    result = job.apply_async()
+    
+    return {
+        'job_id': result.id,
+        'num_tasks': len(tasks),
+        'param_combinations': len(tasks)
+    }
+
+# ==================== 监控任务 ====================
+
+@app.task(name='tasks.get_task_status')
+def get_task_status(task_id):
+    """获取任务状态"""
+    result = AsyncResult(task_id, app=app)
+    
+    return {
+        'task_id': task_id,
+        'state': result.state,
+        'info': result.info,
+        'ready': result.ready(),
+        'successful': result.successful() if result.ready() else None
+    }
+
+@app.task(name='tasks.cancel_task')
+def cancel_task(task_id):
+    """取消任务"""
+    result = AsyncResult(task_id, app=app)
+    result.revoke(terminate=True)
+    
+    return {
+        'task_id': task_id,
+        'cancelled': True
+    }
+
+# ==================== 定时任务 ====================
+
+@app.task(name='tasks.cleanup_old_results')
+def cleanup_old_results(days=30):
+    """清理旧结果（定时任务）"""
+    import os
+    from datetime import datetime, timedelta
+    
+    result_dir = Path('/data/results')
+    cutoff_date = datetime.now() - timedelta(days=days)
+    
+    removed = []
+    
+    for item in result_dir.rglob('*'):
+        if item.is_file():
+            mtime = datetime.fromtimestamp(item.stat().st_mtime)
+            if mtime < cutoff_date:
+                item.unlink()
+                removed.append(str(item))
+    
+    return {
+        'removed_files': len(removed),
+        'cutoff_date': cutoff_date.isoformat()
+    }
+
+@app.task(name='tasks.train_surrogate_model')
+def train_surrogate_model_task(analysis_type='stress'):
+    """训练代理模型（定时任务）"""
+    try:
+        import sys
+        sys.path.append('/app')
+        from ml.trainers.train_surrogate import train_surrogate_model
+        
+        model = train_surrogate_model(analysis_type=analysis_type)
+        
+        if model:
+            return {
+                'status': 'completed',
+                'analysis_type': analysis_type,
+                'trained': True
+            }
+        else:
+            return {
+                'status': 'skipped',
+                'reason': 'Insufficient training data'
+            }
+    
+    except Exception as e:
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+# ==================== Celery Beat 定时任务配置 ====================
+
+app.conf.beat_schedule = {
+    'cleanup-old-results-weekly': {
+        'task': 'tasks.cleanup_old_results',
+        'schedule': 604800.0,  # 每周一次
+        'args': (30,)  # 清理30天前的文件
+    },
+    'train-surrogate-model-daily': {
+        'task': 'tasks.train_surrogate_model',
+        'schedule': 86400.0,  # 每天一次
+        'args': ('stress',)
+    }
+}
+
+# ==================== 工具函数 ====================
+
+def submit_batch_job(part_paths, analysis_type='stress'):
+    """提交批量任务"""
+    result = batch_mesh_generation.delay(part_paths, analysis_type)
+    return result.id
+
+def submit_parametric_study(base_geometry, param_ranges):
+    """提交参数化研究"""
+    result = parametric_study.delay(base_geometry, param_ranges)
+    return result.id
+
+def get_job_progress(job_id):
+    """获取任务进度"""
+    result = AsyncResult(job_id, app=app)
+    
+    if result.ready():
+        return {
+            'status': 'completed',
+            'result': result.result
+        }
+    else:
+        return {
+            'status': 'running',
+            'state': result.state,
+            'info': result.info
+        }
+
+
+# config/celery_config.py
+"""
+Celery 配置文件
+"""
+
+broker_url = 'redis://redis:6379/0'
+result_backend = 'redis://redis:6379/0'
+
+task_serializer = 'json'
+accept_content = ['json']
+result_serializer = 'json'
+timezone = 'Asia/Shanghai'
+enable_utc = True
+
+# 任务路由
+task_routes = {
+    'tasks.mesh_generation': {'queue': 'mesh'},
+    'tasks.analysis': {'queue': 'analysis'},
+    'tasks.visualization': {'queue': 'viz'},
+    'tasks.*': {'queue': 'default'}
+}
+
+# 并发配置
+worker_concurrency = 4
+worker_prefetch_multiplier = 1
+worker_max_tasks_per_child = 50
+
+# 结果过期时间
+result_expires = 86400  # 24小时

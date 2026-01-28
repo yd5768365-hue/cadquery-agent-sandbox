@@ -1,185 +1,141 @@
-CadQuery Agent 沙箱
+# CAE Digital Twin Platform
 
-一个基于 Cherry Studio 构建的高度工程化 AI 代理系统，面向 CadQuery 参数化建模与工程仿真分析，目标是构建一套可控、可审、可复用的自动化工业仿真工作流程。系统通过 MCP（Model Context Protocol）提供工具化接口，使智能体能够安全地读取/写入文件、运行代码，并在受控的 Docker 沙盒中执行反馈闭环，从而自动修复错误、稳定生成可靠的工程分析结果。
+## Quick Start
 
----
+### 1. Access the System
 
-## 本项目的核心亮点
+**Dashboard (Main Interface)**
+- URL: http://localhost:8501
+- All services are running and accessible
 
-**闭环自进化能力**
-AI 可在沙盒环境内运行 Python / Bash 脚本，读取运行日志与报错信息，并基于反馈触发自动修复流程，直至计算成功或达到安全上限。
+**Flower (Task Monitoring)**
+- URL: http://localhost:5555
+- Monitor Celery tasks and workers
 
-**沙盒隔离（安全优先）**
-所有建模、网格与仿真任务均在 Docker 容器内执行，避免在本地环境进行高风险计算，有效防止环境污染与系统损坏。
+### 2. System Status
 
-**权威知识扫描**
-系统预先注入 CadQuery 官方文档与示例代码，显著降低大模型“幻觉”风险，确保 API 调用与建模逻辑的工程正确性。
+All containers are currently running:
+```
+✓ cae_dashboard      - http://localhost:8501
+✓ cae_flower         - http://localhost:5555
+✓ cae_celery_worker  - Background tasks
+✓ cae_gmsh           - Mesh generation
+✓ cae_calculix       - FEM simulation
+✓ cae_postgres       - Database:5432
+✓ cae_redis          - Queue:6379
+```
 
-**工程化提示与 SOP 约束**
-通过工程提示模板与标准操作流程（SOP），保证输出结果具备一致性、可复现性与可审计性。
+### 3. Quick Test
 
-**面向修改与协作的代码风格**
-生成的 CAD 与仿真脚本遵循清晰、模块化的工程风格，便于后续审查、修改与团队协作。
+Verify system functionality:
+```bash
+cd E:\DeepSeek_Work
+python quick_test.py
+```
 
-**标准零件库集成**
-已集成 `cq_warehouse` 标准零件库，包含常用螺栓、销钉等参数化标准件，可直接在建模脚本中调用，显著提升建模效率。
+### 4. Common Commands
 
-**仿真分析环境已完成配置**
-系统已完成静力学与模态分析所需的工具链与容器环境配置，智能体可直接调用完成工程仿真。
+**View all containers:**
+```bash
+docker ps --filter "name=cae_"
+```
 
----
+**View service logs:**
+```bash
+docker logs cae_dashboard --tail 50 -f
+docker logs cae_celery_worker --tail 50 -f
+```
 
-## 系统功能与当前完成度（功能总览）
+**Restart services:**
+```bash
+cd docker
+docker-compose restart
+```
 
-系统已完成从**几何建模 → 仿真求解 → 数据提取 → 结果呈现**的完整自动化闭环，当前能力总结如下。
+**Stop all services:**
+```bash
+cd docker
+docker-compose down
+```
 
-### 1. 核心仿真与建模能力
+**Start all services:**
+```bash
+cd docker
+docker-compose up -d
+```
 
-**参数化几何建模**
-基于 CadQuery 的代码驱动建模方式，所有关键几何参数（尺寸、圆角、孔位）均可通过变量一键修改，无需手动操作 CAD 软件。
+### 5. What Can You Do?
 
-**外部商业 CAD 模型导入**
-支持通过 `importStep` 读取 SolidWorks 等商业 CAD 软件导出的 STEP 文件，实现商业 CAD 与开源仿真分析链路的对接。
+#### Via Dashboard (http://localhost:8501)
+1. **Real-time Monitoring** - View simulation statistics
+2. **Data Analysis** - Analyze results and trends
+3. **Model Management** - Train and test ML models
+4. **Visualization** - Generate 3D visualizations
+5. **Task Management** - Submit and monitor tasks
 
-**多物理场分析能力（已完成部分）**
+#### Via Direct Commands
+```bash
+# Generate mesh with Gmsh
+docker exec -it cae_gmsh bash
+gmsh /app/input/model.step -2 -o /app/meshes/model.msh
 
-* 静力学分析：计算结构在指定载荷下的位移与 Von Mises 应力，并完成基础强度判定。
-* 模态分析：自动提取结构前 10 阶固有频率，用于振动特性评估与共振风险预警。
+# Run simulation with CalculiX
+docker exec -it cae_calculix bash
+ccx -i /app/analyses/model
 
-### 2. 数据处理与系统健壮性
+# Check database
+docker exec -it cae_postgres psql -U cae_user -d cae_platform
 
-**数据格式自动转换库（cae_lib）**
-自动将网格节点数据从空格分隔格式转换为 CalculiX 要求的逗号分隔格式，彻底解决解析器崩溃问题。
+# Check Redis
+docker exec -it cae_redis redis-cli
+```
 
-**主动数据提取机制**
-内置 Python 脚本可自动扫描数万行 `.dat` 文件，精准提取最大应力、最大位移与频率信息。
+### 6. File Locations
 
-**物理常识自检（工程直觉监控）**
-当第一阶频率异常接近 0（如 0.0003 Hz）时，系统自动判定为约束失效并触发警告。
+**Input Files:** `E:\DeepSeek_Work\test\input\`
+**Mesh Files:** `E:\DeepSeek_Work\test\meshes\`
+**Analysis Files:** `E:\DeepSeek_Work\test\analyses\`
+**Result Files:** `E:\DeepSeek_Work\test\results\`
+**Visualizations:** `E:\DeepSeek_Work\test\visualizations\`
 
-### 3. 系统管理与安全协议
+### 7. Documentation
 
-**容器化运行环境**
-统一 `/app/` 工作路径，消除跨平台差异，保证计算结果可复现。
+- **Detailed User Guide:** `USER_GUIDE.md`
+- **Test Script:** `quick_test.py`
+- **Deployment Config:** `docker/docker-compose.yml`
 
-**透明写入机制**
-所有脚本通过 `cat << 'EOF' > file` 方式生成，执行逻辑全程可见、可审计。
+### 8. Troubleshooting
 
-**灾难恢复与权限约束**
-明确禁止高危指令，通过精确清理规则与备份机制保护核心源码。
+**Dashboard not loading?**
+```bash
+docker logs cae_dashboard --tail 50
+docker restart cae_dashboard
+```
 
-### 4. 结果可视化与工程报表
+**Tasks not running?**
+```bash
+docker logs cae_celery_worker --tail 50
+docker restart cae_celery_worker
+```
 
-**CSV 工程报表生成**
-一键导出标准化 CSV 文件，方便在 Excel、Origin 等工具中分析。
+**Check all service health:**
+```bash
+docker ps --filter "name=cae_"
+docker stats --filter "name=cae_"
+```
 
-**后处理兼容性**
-支持生成 `.frd` 文件并导入 ParaView 进行三维应力云图与模态动画展示。
+### 9. Next Steps
 
-**开发环境增强显示**
-适配 VS Code 的 Rainbow CSV 与 Data Preview 插件，实现彩色分列与即时图表预览。
-
----
-
-## 系统架构（概览）
-
-Cherry Studio 接收用户建模需求与工程约束。
-
-LLM（如 DeepSeek）结合 CadQuery 文档进行推理与代码生成。
-
-通过 MCP 调用工具：
-
-* `read_file`：读取模型脚本与上下文；
-* `write_file`：生成或覆盖建模与仿真脚本；
-* `run_code`：在 Docker 容器中执行代码并收集日志；
-* `bash_access`：受控执行容器内工具命令。
-
-反馈闭环：解析运行输出，若失败则触发自动修复流程。
-
-简化流程：
-用户 → Cherry Studio → LLM → MCP Tools → Docker Sandbox → Logs → LLM（修复 / 交付）
-
----
-
-## 标准化工程工作流程（SOP）
-
-系统已演进为模块化的自动化仿真工厂，作为“总工”，只需掌握以下四个阶段即可完成完整工程分析。
-
-### 第一阶段：模型输入与预处理
-
-* SolidWorks 导出 STEP（AP203 / AP214），文件名不含中文。
-* 将 `.step` 文件放入 `/app/` 目录。
-* 定义关键参数或指定外部模型文件名。
-
-### 第二阶段：自动化网格与脚本生成
-
-* 自动导入几何并划分网格。
-* 强制进行节点数据格式转换（ID, X, Y, Z）。
-* 使用透明写入方式生成全部脚本供审计。
-
-### 第三阶段：求解执行与物理自检
-
-* 一键运行生成 `.dat` 与 `.frd` 文件。
-* 自动提取最大应力、最大位移与前 10 阶频率。
-* 物理红线监控：
-
-  * 应力超屈服强度 → 结构失效提示；
-  * 第一阶频率 < 1 Hz → 约束失效警告。
-
-### 第四阶段：结果交付与可视化
-
-* 自动生成 `final_report.csv`。
-* 在 VS Code 中进行彩色数据审查。
-* 使用 ParaView 查看三维应力云图与振型动画。
-
----
-
-## 为什么选择本项目
-
-* 为 CadQuery 建模提供完整自动化工程流程。
-* 适合教学、课程设计与工程原型验证。
-* 安全、可审计、可复现。
-* 将重复试错交给自动化，把精力集中在设计决策上。
+1. Open http://localhost:8501 in your browser
+2. Explore the dashboard interface
+3. Upload or create geometry files in `test/input/`
+4. Run mesh generation and simulations
+5. View results and visualizations
 
 ---
 
-## 作者与动机
+**System Version:** 1.0.0
+**Deployment:** Docker Compose
+**Status:** Running ✓
 
-我是项目作者，目前是一名大学一年级学生。
-
-大一上：学习互联网金融，接触系统与数据思维；
-大一下：转入机械设计及其自动化，系统学习 CAD、制造与参数化建模。
-
-在跨学科学习中，我发现传统建模与验证流程效率低、易出错，于是尝试用自动化与智能体方式改进工程设计流程，形成了 CadQuery Agent 沙箱。
-
-目前系统已完成静态与模态分析的完整闭环，并建立了可控、可审、可复用的工程仿真流程。我仍在持续学习与完善中，欢迎任何建议与改进意见。
-
----
-
-## 贡献指南
-
-欢迎提出 Issue、提交 PR 或贡献示例算例。
-
-* 点 Star 支持项目
-* 提交功能建议或 Bug
-* 改进文档与容器配置
-* 提供 CadQuery 工程案例
-
----
-
-## 未来计划（路线图）
-
-* 提供一键式本地运行脚本与 Docker Compose
-* 增加更多 CadQuery 示例与单元测试
-* 支持更多 LLM 与本地模型
-* 改进 Cherry Studio 内的可视化交互
-* 整理教学系列文档
-
----
-
-## 致谢与许可
-
-感谢 CadQuery 社区、Cherry Studio 项目及所有提供建议的贡献者。
-
-本项目采用 MIT License。
-
+For detailed information, see `USER_GUIDE.md`

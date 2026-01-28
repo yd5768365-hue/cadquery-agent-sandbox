@@ -1,0 +1,187 @@
+services:
+  # Redis - 任务队列和缓存
+  redis:
+    image: redis:7-alpine
+    container_name: cae_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - cae_network
+
+  # PostgreSQL - 元数据存储
+  postgres:
+    image: postgres:15-alpine
+    container_name: cae_postgres
+    environment:
+      POSTGRES_DB: cae_platform
+      POSTGRES_USER: cae_user
+      POSTGRES_PASSWORD: cae_pass_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cae_network
+
+  # Gmsh 服务
+  gmsh-service:
+    build:
+      context: ../.docker
+      dockerfile: gmsh.Dockerfile
+    container_name: cae_gmsh
+    volumes:
+      - ../test:/app
+    environment:
+      - SERVICE_NAME=gmsh
+      - OMP_NUM_THREADS=4
+    networks:
+      - cae_network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+
+  # CalculiX 服务
+  calculix-service:
+    build:
+      context: ../.docker
+      dockerfile: calculix.Dockerfile
+    container_name: cae_calculix
+    volumes:
+      - ../test:/app
+    environment:
+      - SERVICE_NAME=calculix
+      - OMP_NUM_THREADS=8
+    networks:
+      - cae_network
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16G
+
+  # ML 服务
+  ml-service:
+    build:
+      context: ../.docker
+      dockerfile: ml.Dockerfile
+    container_name: cae_ml
+    volumes:
+      - ../ml:/app/ml
+      - ../test:/app/data
+    environment:
+      - SERVICE_NAME=ml
+      - CUDA_VISIBLE_DEVICES=0
+    networks:
+      - cae_network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+
+  # 可视化服务
+  visualize-service:
+    build:
+      context: ../.visualize
+      dockerfile: Dockerfile
+    container_name: cae_visualize
+    volumes:
+      - ../test:/app
+    environment:
+      - SERVICE_NAME=visualize
+      - DISPLAY=:99
+    networks:
+      - cae_network
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: ../.server
+      dockerfile: Dockerfile
+    container_name: cae_celery_worker
+    command: sh -c "python -m celery -A tasks worker --loglevel=info --concurrency=4"
+    volumes:
+      - ../server:/app
+      - ../test:/data
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - cae_network
+
+  # Celery Beat (定时任务)
+  celery-beat:
+    build:
+      context: ../.server
+      dockerfile: Dockerfile
+    container_name: cae_celery_beat
+    command: sh -c "celery -A tasks beat --loglevel=info"
+    volumes:
+      - ../server:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - cae_network
+
+  # Flower - Celery 监控
+  flower:
+    build:
+      context: ../.server
+      dockerfile: Dockerfile
+    container_name: cae_flower
+    command: sh -c "celery -A tasks flower --port=5555"
+    ports:
+      - "5555:5555"
+    volumes:
+      - ../server:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - cae_network
+
+  # Dashboard
+  dashboard:
+    build:
+      context: ../.Dashboard
+      dockerfile: Dockerfile
+    container_name: cae_dashboard
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../dashboard:/app
+      - ../server:/server
+      - ../ml:/ml
+      - ../services:/services
+      - ../test:/data
+    environment:
+      - DATABASE_URL=postgresql://cae_user:cae_pass_2024@postgres:5432/cae_platform
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app:/server:/ml:/services
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - cae_network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  cae_network:
+    driver: bridge
