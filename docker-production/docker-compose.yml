@@ -1,0 +1,288 @@
+version: '3.8'
+
+services:
+  # Redis - 任务队列和缓存
+  redis:
+    image: redis:7-alpine
+    container_name: cae_redis_prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    networks:
+      - cae_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # PostgreSQL - 元数据存储
+  postgres:
+    image: postgres:15-alpine
+    container_name: cae_postgres_prod
+    environment:
+      POSTGRES_DB: cae_platform
+      POSTGRES_USER: cae_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cae_network
+    restart: unless-stopped
+    secrets:
+      - postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cae_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Gmsh 服务
+  gmsh-service:
+    build:
+      context: .
+      dockerfile: docker/gmsh.Dockerfile
+      target: production
+    container_name: cae_gmsh_prod
+    volumes:
+      - ./test:/app
+    environment:
+      - SERVICE_NAME=gmsh
+      - OMP_NUM_THREADS=4
+    networks:
+      - cae_network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+    restart: unless-stopped
+
+  # CalculiX 服务
+  calculix-service:
+    build:
+      context: .
+      dockerfile: docker/calculix.Dockerfile
+      target: production
+    container_name: cae_calculix_prod
+    volumes:
+      - ./test:/app
+    environment:
+      - SERVICE_NAME=calculix
+      - OMP_NUM_THREADS=8
+    networks:
+      - cae_network
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16G
+        reservations:
+          cpus: '4'
+          memory: 8G
+    restart: unless-stopped
+
+  # ML 服务
+  ml-service:
+    build:
+      context: .
+      dockerfile: docker/ml.Dockerfile
+      target: production
+    container_name: cae_ml_prod
+    volumes:
+      - ./ml:/app/ml
+      - ./test:/app/data
+    environment:
+      - SERVICE_NAME=ml
+      - CUDA_VISIBLE_DEVICES=0
+    networks:
+      - cae_network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    restart: unless-stopped
+
+  # 可视化服务
+  visualize-service:
+    build:
+      context: .
+      dockerfile: docker/visualize.Dockerfile
+      target: production
+    container_name: cae_visualize_prod
+    volumes:
+      - ./test:/app
+    environment:
+      - SERVICE_NAME=visualize
+      - DISPLAY=:99
+    networks:
+      - cae_network
+    restart: unless-stopped
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+      target: production
+    container_name: cae_celery_worker_prod
+    command: sh -c "python -m celery -A tasks worker --loglevel=info --concurrency=4 --max-tasks-per-child=1000"
+    volumes:
+      - ./server:/app
+      - ./test:/data
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - cae_network
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "tasks", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Beat (定时任务)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+      target: production
+    container_name: cae_celery_beat_prod
+    command: sh -c "celery -A tasks beat --loglevel=info --pidfile=/tmp/celerybeat.pid"
+    volumes:
+      - ./server:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cae_network
+    restart: unless-stopped
+
+  # Flower - Celery 监控
+  flower:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+      target: production
+    container_name: cae_flower_prod
+    command: sh -c "celery -A tasks flower --port=5555 --basic_auth=admin:${FLOWER_PASSWORD}"
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./server:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FLOWER_PASSWORD_FILE=/run/secrets/flower_password
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - cae_network
+    secrets:
+      - flower_password
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+      target: production
+    container_name: cae_dashboard_prod
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0 --server.enableCORS=false --server.enableXsrfProtection=false
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./dashboard:/app
+      - ./server:/app/server
+      - ./ml:/app/ml
+      - ./services:/app/services
+      - ./test:/data
+    environment:
+      - DATABASE_URL=postgresql://cae_user:cae_pass_2024@postgres:5432/cae_platform
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app:/server:/ml:/services
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cae_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: cae_nginx_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - dashboard
+      - flower
+    networks:
+      - cae_network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  flower_password:
+    file: ./secrets/flower_password.txt
+
+networks:
+  cae_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,293 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cae-platform
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cae-config
+  namespace: cae-platform
+data:
+  DATABASE_URL: "postgresql://cae_user:cae_pass_2024@postgres:5432/cae_platform"
+  REDIS_URL: "redis://redis:6379/0"
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cae-secrets
+  namespace: cae-platform
+type: Opaque
+data:
+  POSTGRES_PASSWORD: Y2FlX3Bhc3NfMjAyNA==
+  POSTGRES_USER: Y2FlX3VzZXI=
+  POSTGRES_DB: Y2FlX3BsYXRmb3Jt
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: cae-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: cae-config
+              key: DATABASE_URL
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: cae-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cae-secrets
+              key: POSTGRES_PASSWORD
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: cae-platform
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: cae-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: cae-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: cae-platform
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: cae-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cae-dashboard
+  namespace: cae-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cae-dashboard
+  template:
+    metadata:
+      labels:
+        app: cae-dashboard
+    spec:
+      containers:
+      - name: dashboard
+        image: ghcr.io/yd5768365-hue/cadquery-agent-sandbox-dashboard:latest
+        ports:
+        - containerPort: 8501
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: cae-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: cae-config
+              key: REDIS_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cae-dashboard
+  namespace: cae-platform
+spec:
+  selector:
+    app: cae-dashboard
+  ports:
+  - port: 80
+    targetPort: 8501
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cae-worker
+  namespace: cae-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cae-worker
+  template:
+    metadata:
+      labels:
+        app: cae-worker
+    spec:
+      containers:
+      - name: worker
+        image: ghcr.io/yd5768365-hue/cadquery-agent-sandbox-worker:latest
+        env:
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: cae-config
+              key: CELERY_BROKER_URL
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            configMapKeyRef:
+              name: cae-config
+              key: CELERY_RESULT_BACKEND
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cae-flower
+  namespace: cae-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cae-flower
+  template:
+    metadata:
+      labels:
+        app: cae-flower
+    spec:
+      containers:
+      - name: flower
+        image: ghcr.io/yd5768365-hue/cadquery-agent-sandbox-worker:latest
+        command: ["celery", "-A", "tasks", "flower", "--port=5555"]
+        ports:
+        - containerPort: 5555
+        env:
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: cae-config
+              key: CELERY_BROKER_URL
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            configMapKeyRef:
+              name: cae-config
+              key: CELERY_RESULT_BACKEND
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cae-flower
+  namespace: cae-platform
+spec:
+  selector:
+    app: cae-flower
+  ports:
+  - port: 80
+    targetPort: 5555
+  type: LoadBalancer

@@ -97,6 +97,14 @@ Thumbs.db
 # Conversation history
 conversation_history.json
 my_conversations.json
+memory_reviews.json
+
+# Secrets
+secrets/*.txt
+secrets/postgres_password.txt
+secrets/flower_password.txt
+nginx/.htpasswd
+nginx/ssl/*.pem
 
 # Temporary files
 *.tmp

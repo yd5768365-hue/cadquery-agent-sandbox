@@ -1,141 +1,463 @@
 # CAE Digital Twin Platform
 
-## Quick Start
+A comprehensive Computer-Aided Engineering (CAE) Digital Twin platform built with Docker, Celery, and Streamlit for real-time simulation, mesh generation, and data visualization.
 
-### 1. Access the System
+## 🚀 Features
 
-**Dashboard (Main Interface)**
-- URL: http://localhost:8501
-- All services are running and accessible
+- **Real-time Simulation** - FEM analysis using CalculiX
+- **Mesh Generation** - High-quality mesh generation with Gmsh
+- **Dashboard** - Interactive web interface built with Streamlit
+- **Task Queue** - Asynchronous task processing with Celery
+- **ML Integration** - Machine learning models for optimization
+- **Data Visualization** - 3D visualization with PyVista
+- **Monitoring** - Real-time task monitoring with Flower
 
-**Flower (Task Monitoring)**
-- URL: http://localhost:5555
-- Monitor Celery tasks and workers
+## 📋 Table of Contents
 
-### 2. System Status
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Development](#development)
+- [Production Deployment](#production-deployment)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
-All containers are currently running:
-```
-✓ cae_dashboard      - http://localhost:8501
-✓ cae_flower         - http://localhost:5555
-✓ cae_celery_worker  - Background tasks
-✓ cae_gmsh           - Mesh generation
-✓ cae_calculix       - FEM simulation
-✓ cae_postgres       - Database:5432
-✓ cae_redis          - Queue:6379
-```
+## 🛠️ Prerequisites
 
-### 3. Quick Test
+- Docker Desktop (or Docker Engine)
+- Docker Compose
+- Python 3.10+
+- Git
 
-Verify system functionality:
+## 🚀 Quick Start
+
+### 1. Clone the Repository
+
 ```bash
-cd E:\DeepSeek_Work
-python quick_test.py
+git clone https://github.com/yd5768365-hue/cadquery-agent-sandbox.git
+cd cadquery-agent-sandbox
 ```
 
-### 4. Common Commands
+### 2. Start Services
 
-**View all containers:**
-```bash
-docker ps --filter "name=cae_"
-```
-
-**View service logs:**
-```bash
-docker logs cae_dashboard --tail 50 -f
-docker logs cae_celery_worker --tail 50 -f
-```
-
-**Restart services:**
-```bash
-cd docker
-docker-compose restart
-```
-
-**Stop all services:**
-```bash
-cd docker
-docker-compose down
-```
-
-**Start all services:**
 ```bash
 cd docker
 docker-compose up -d
 ```
 
-### 5. What Can You Do?
+### 3. Access the Dashboard
 
-#### Via Dashboard (http://localhost:8501)
-1. **Real-time Monitoring** - View simulation statistics
-2. **Data Analysis** - Analyze results and trends
-3. **Model Management** - Train and test ML models
-4. **Visualization** - Generate 3D visualizations
-5. **Task Management** - Submit and monitor tasks
+Open your browser and navigate to:
+- **Dashboard**: http://localhost:8501
+- **Flower Monitoring**: http://localhost:5555
+- **API Health**: http://localhost/health
 
-#### Via Direct Commands
+### 4. Run Quick Tests
+
 ```bash
-# Generate mesh with Gmsh
-docker exec -it cae_gmsh bash
-gmsh /app/input/model.step -2 -o /app/meshes/model.msh
+cd ..
+python quick_test.py
+```
 
-# Run simulation with CalculiX
-docker exec -it cae_calculix bash
-ccx -i /app/analyses/model
+## 💻 Development
 
-# Check database
+### Local Development Setup
+
+#### Option 1: Using Docker (Recommended)
+
+```bash
+# Start all services
+cd docker
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+#### Option 2: Local Python Environment
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start Dashboard
+cd dashboard
+streamlit run app.py --server.port=8501
+
+# Start Celery Worker (new terminal)
+cd server
+celery -A tasks worker --loglevel=info
+
+# Start Flower (new terminal)
+celery -A tasks flower --port=5555
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=. --cov-report=html
+
+# Run specific test
+pytest tests/test_dashboard.py
+```
+
+### Code Quality Checks
+
+```bash
+# Format code
+black .
+isort .
+
+# Lint code
+flake8 .
+mypy server/
+
+# Run security scan
+trivy fs .
+```
+
+## 🌐 Production Deployment
+
+### Docker Compose Production
+
+#### 1. Setup Secrets
+
+```bash
+cd docker-production
+
+# Generate secure passwords
+openssl rand -base64 32 > ../secrets/postgres_password.txt
+openssl rand -base64 16 > ../secrets/flower_password.txt
+
+# Generate htpasswd for Nginx
+htpasswd -bnC admin YOUR_PASSWORD > ../nginx/.htpasswd
+```
+
+#### 2. Configure Environment
+
+Edit `docker-compose.yml` and update:
+- Database credentials
+- Redis configuration
+- API keys and secrets
+
+#### 3. Deploy
+
+```bash
+# Build and start services
+docker-compose -f docker-production/docker-compose.yml up -d --build
+
+# Check service health
+docker-compose -f docker-production/docker-compose.yml ps
+docker-compose -f docker-production/docker-compose.yml logs
+```
+
+#### 4. Access Services
+
+- **Application**: http://your-server-ip
+- **Flower**: http://your-server-ip/flower/
+- **Health Check**: http://your-server-ip/health
+
+### Kubernetes Deployment
+
+#### 1. Install kubectl and Configure Cluster
+
+```bash
+# Install kubectl (if not installed)
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# Configure cluster context
+kubectl config use-context your-cluster-name
+```
+
+#### 2. Deploy to Kubernetes
+
+```bash
+# Create namespace
+kubectl create namespace cae-platform
+
+# Deploy all resources
+kubectl apply -f k8s/
+
+# Check deployment status
+kubectl get pods -n cae-platform
+kubectl get services -n cae-platform
+
+# View logs
+kubectl logs -n cae-platform -l app=cae-dashboard -f
+```
+
+#### 3. Configure Ingress (Optional)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cae-ingress
+  namespace: cae-platform
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - cae.yourdomain.com
+    secretName: cae-tls
+  rules:
+  - host: cae.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cae-dashboard
+            port:
+              number: 80
+```
+
+## 🔄 CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and deployment.
+
+### Workflow Triggers
+
+- Push to `main` or `develop` branches
+- Pull requests to `main` or `develop` branches
+
+### Pipeline Stages
+
+1. **Lint** - Code quality checks (Black, isort, flake8, mypy)
+2. **Security** - Vulnerability scanning with Trivy
+3. **Test** - Unit tests with coverage reporting
+4. **Build** - Docker image build and push to registry
+5. **Deploy** - Automatic deployment to production (main branch only)
+
+### Manual Deployment
+
+```bash
+# Build and push images manually
+docker build -f docker/dashboard.Dockerfile -t ghcr.io/yd5768365-hue/cadquery-agent-sandbox-dashboard:latest .
+docker push ghcr.io/yd5768365-hue/cadquery-agent-sandbox-dashboard:latest
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://cae_user:cae_pass_2024@postgres:5432/cae_platform` |
+| `REDIS_URL` | Redis connection string | `redis://redis:6379/0` |
+| `CELERY_BROKER_URL` | Celery broker URL | `redis://redis:6379/0` |
+| `CELERY_RESULT_BACKEND` | Celery result backend | `redis://redis:6379/0` |
+| `PYTHONPATH` | Python module path | `/app:/server:/ml:/services` |
+
+### File Structure
+
+```
+cae-digital-twin/
+├── docker/                    # Development Docker Compose
+├── docker-production/         # Production Docker Compose
+├── k8s/                       # Kubernetes manifests
+├── dashboard/                 # Streamlit dashboard
+│   ├── app.py                # Main application
+│   └── pages/                # Additional pages
+├── server/                   # Backend services
+│   ├── server.py             # FastAPI server
+│   ├── tasks.py              # Celery tasks
+│   └── data_collector.py     # Data collection
+├── ml/                       # Machine learning models
+├── services/                 # External service integrations
+├── scripts/                  # Utility scripts
+├── test/                     # Test files and data
+├── config/                   # Configuration files
+├── nginx/                    # Nginx configuration
+├── secrets/                  # Sensitive data (not committed)
+└── requirements.txt          # Python dependencies
+```
+
+## 🧪 Testing
+
+### Unit Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=. --cov-report=html
+
+# Run specific test file
+pytest tests/test_tasks.py
+```
+
+### Integration Tests
+
+```bash
+# Run integration tests
+pytest tests/integration/
+
+# Test API endpoints
+pytest tests/integration/test_api.py
+```
+
+### E2E Tests
+
+```bash
+# Run end-to-end tests
+python test_system.py
+```
+
+## 🔧 Troubleshooting
+
+### Docker Issues
+
+**Containers won't start**
+```bash
+# Check Docker is running
+docker ps
+
+# View container logs
+docker logs cae_dashboard
+
+# Restart containers
+docker-compose restart
+```
+
+**Out of memory**
+```bash
+# Reduce memory limits in docker-compose.yml
+# Or increase Docker Desktop memory allocation
+```
+
+### Database Issues
+
+**Connection refused**
+```bash
+# Check PostgreSQL is running
+docker ps | grep postgres
+
+# View PostgreSQL logs
+docker logs cae_postgres
+
+# Connect to database
 docker exec -it cae_postgres psql -U cae_user -d cae_platform
+```
 
-# Check Redis
+### Celery Issues
+
+**Tasks not executing**
+```bash
+# Check Celery worker is running
+docker logs cae_celery_worker
+
+# Check Redis is running
+docker logs cae_redis
+
+# Connect to Redis
 docker exec -it cae_redis redis-cli
+> PING
 ```
 
-### 6. File Locations
+### Dashboard Issues
 
-**Input Files:** `E:\DeepSeek_Work\test\input\`
-**Mesh Files:** `E:\DeepSeek_Work\test\meshes\`
-**Analysis Files:** `E:\DeepSeek_Work\test\analyses\`
-**Result Files:** `E:\DeepSeek_Work\test\results\`
-**Visualizations:** `E:\DeepSeek_Work\test\visualizations\`
-
-### 7. Documentation
-
-- **Detailed User Guide:** `USER_GUIDE.md`
-- **Test Script:** `quick_test.py`
-- **Deployment Config:** `docker/docker-compose.yml`
-
-### 8. Troubleshooting
-
-**Dashboard not loading?**
+**Streamlit not loading**
 ```bash
-docker logs cae_dashboard --tail 50
+# Check dashboard logs
+docker logs cae_dashboard
+
+# Restart dashboard
 docker restart cae_dashboard
+
+# Verify Streamlit configuration
+cat dashboard/.streamlit/config.toml
 ```
 
-**Tasks not running?**
+## 📊 Monitoring
+
+### Flower Monitoring
+
+Access Flower at http://localhost:5555 to monitor:
+- Active Celery tasks
+- Worker status
+- Task history
+- Performance metrics
+
+### Logs
+
 ```bash
-docker logs cae_celery_worker --tail 50
-docker restart cae_celery_worker
+# View all logs
+docker-compose logs
+
+# View specific service logs
+docker logs cae_dashboard -f
+docker logs cae_celery_worker -f
+
+# View logs from Kubernetes
+kubectl logs -n cae-platform -l app=cae-dashboard -f
 ```
 
-**Check all service health:**
-```bash
-docker ps --filter "name=cae_"
-docker stats --filter "name=cae_"
-```
+### Metrics
 
-### 9. Next Steps
+The platform integrates with Prometheus for metrics collection:
+- Request latency
+- Task execution time
+- Error rates
+- Resource utilization
 
-1. Open http://localhost:8501 in your browser
-2. Explore the dashboard interface
-3. Upload or create geometry files in `test/input/`
-4. Run mesh generation and simulations
-5. View results and visualizations
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+
+- Follow PEP 8 for Python code
+- Use Black for code formatting
+- Write unit tests for new features
+- Update documentation as needed
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- CalculiX for FEM simulation
+- Gmsh for mesh generation
+- Streamlit for the web interface
+- Celery for task queue management
+- PyVista for 3D visualization
+
+## 📞 Support
+
+For support, please:
+- Open an issue on GitHub
+- Email: support@example.com
+- Documentation: [USER_GUIDE.md](USER_GUIDE.md)
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/yd5768365-hue/cadquery-agent-sandbox)
+- [Docker Hub](https://hub.docker.com/r/yd5768365-hue/cae-digital-twin)
+- [Documentation](https://cae-digital-twin.readthedocs.io)
 
 ---
 
-**System Version:** 1.0.0
-**Deployment:** Docker Compose
-**Status:** Running ✓
-
-For detailed information, see `USER_GUIDE.md`
+**System Version**: 1.0.0
+**Last Updated**: 2026-01-28

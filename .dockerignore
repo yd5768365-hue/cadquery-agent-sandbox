@@ -1,0 +1,137 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Docker
+*.log
+docker-compose.override.yml
+docker-compose.yml
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Documentation
+*.md
+docs/
+.DIAGNOSTIC_REPORT.md
+.IMPORT_FIX_SUMMARY.md
+.PUSH_TO_GITHUB.md
+
+# Test files
+test/
+tests/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+.mypy_cache/
+
+# ML models (will be downloaded separately)
+ml/models/*.pkl
+ml/models/*.h5
+ml/models/*.pt
+ml/models/*.pth
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+*.temp
+*.bak
+nul
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Streamlit
+.streamlit/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Data files
+data/
+datasets/
+
+# Node modules (if any frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build artifacts
+dist/
+build/
+*.tgz
+
+# Images and media (large files)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+
+# Compressed files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Conversation history
+conversation_history.json
+my_conversations.json
+memory_reviews.json
