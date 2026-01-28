@@ -2,10 +2,12 @@ import streamlit as st
 import sys
 import os
 
+# 切换到项目根目录
+os.chdir('/app')
+
 # 确保Python路径包含必要的目录
-sys.path.insert(0, '/server')
-sys.path.insert(0, '/ml')
-sys.path.insert(0, '/services')
+if '/app' not in sys.path:
+    sys.path.insert(0, '/app')
 
 from services.viz_service import VisualizationService
 from dashboard.components.three_d_viewer import CAE3DViewer

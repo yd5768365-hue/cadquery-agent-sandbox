@@ -13,9 +13,9 @@ import sys
 import os
 
 # 确保Python路径包含必要的目录
-sys.path.insert(0, '/server')
-sys.path.insert(0, '/ml')
-sys.path.insert(0, '/services')
+sys.path.insert(0, '/app/server')
+sys.path.insert(0, '/app/ml')
+sys.path.insert(0, '/app/services')
 
 # 尝试导入模块
 try:
