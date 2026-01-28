@@ -2,6 +2,11 @@ import streamlit as st
 import sys
 import os
 
+# 确保Python路径包含必要的目录
+sys.path.insert(0, '/server')
+sys.path.insert(0, '/ml')
+sys.path.insert(0, '/services')
+
 from ml.trainers.train_surrogate import train_surrogate_model
 from ml.models.surrogate_model import SurrogateModel
 from server.data_collector import SimulationDataCollector

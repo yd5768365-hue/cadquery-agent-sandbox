@@ -2,6 +2,11 @@ import streamlit as st
 import sys
 import os
 
+# 确保Python路径包含必要的目录
+sys.path.insert(0, '/server')
+sys.path.insert(0, '/ml')
+sys.path.insert(0, '/services')
+
 from server.data_collector import SimulationDataCollector
 import pandas as pd
 import plotly.express as px

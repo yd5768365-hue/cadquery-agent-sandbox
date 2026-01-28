@@ -2,9 +2,13 @@ import streamlit as st
 import sys
 import os
 
+# 确保Python路径包含必要的目录
+sys.path.insert(0, '/server')
+sys.path.insert(0, '/ml')
+sys.path.insert(0, '/services')
+
 from services.viz_service import VisualizationService
 from dashboard.components.three_d_viewer import CAE3DViewer
-import os
 
 def show_visualize_page():
     """可视化页面"""
