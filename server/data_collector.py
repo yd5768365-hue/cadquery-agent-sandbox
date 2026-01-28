@@ -12,10 +12,24 @@ import sqlite3
 import numpy as np
 
 class SimulationDataCollector:
-    def __init__(self, db_path="E:/DeepSeek_Work/ml/data/simulation_history.db"):
+    def __init__(self, db_path=None):
+        # 支持环境变量和容器内路径
+        import os
+        if db_path is None:
+            db_path = os.environ.get(
+                'DATABASE_PATH',
+                '/data/simulation_history.db'  # Docker 容器内路径
+            )
+
         self.db_path = db_path
+        self._ensure_directory()
         self._init_database()
-    
+
+    def _ensure_directory(self):
+        """确保数据库目录存在"""
+        db_dir = Path(self.db_path).parent
+        db_dir.mkdir(parents=True, exist_ok=True)
+
     def _init_database(self):
         """初始化数据库"""
         conn = sqlite3.connect(self.db_path)

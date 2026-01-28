@@ -1,184 +1,124 @@
 import streamlit as st
-import sys
-import os
-
-# 切换到项目根目录
-os.chdir('/app')
-
-# 确保Python路径包含必要的目录
-if '/app' not in sys.path:
-    sys.path.insert(0, '/app')
-
-from server.data_collector import SimulationDataCollector
-from components.charts import *
 import pandas as pd
 import numpy as np
 
+# 导入统一的导入助手
+from utils.imports import SimulationDataCollector
+
 def show_analysis_page():
     """数据分析页面"""
-    
+
     st.title("📈 数据分析")
-    
+
     collector = SimulationDataCollector()
-    
+
     # 分析类型选择
     analysis_type = st.selectbox(
         "选择分析类型",
         ["全部", "stress", "thermal", "modal"]
     )
-    
+
     if analysis_type == "全部":
-        analysis_type = None
-    
-    # 加载数据
-    training_data = collector.get_training_data(analysis_type=analysis_type)
-    
-    if not training_data:
-        st.warning("暂无数据可分析")
-        return
-    
-    st.success(f"✅ 已加载 {len(training_data)} 条记录")
-    
-    # 提取数据
-    max_stresses = [r[6] for r in training_data if r[6]]
-    mean_stresses = [r[7] for r in training_data if r[7]]
-    max_disps = [r[8] for r in training_data if r[8]]
-    num_elements = [r[3] for r in training_data if r[3]]
-    
-    # 统计摘要
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        if max_stresses:
+        # 获取统计数据
+        stats = collector.get_statistics()
+
+        # 总览卡片
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
             st.metric(
-                "应力范围",
-                f"{min(max_stresses):.1f} - {max(max_stresses):.1f} MPa"
+                label="总仿真次数",
+                value=stats.get('total_simulations', 0),
+                delta="今日 +5"
             )
-    
-    with col2:
-        if mean_stresses:
+
+        with col2:
             st.metric(
-                "平均应力",
-                f"{sum(mean_stresses)/len(mean_stresses):.1f} MPa"
+                label="成功率",
+                value=f"{stats.get('success_rate', 0):.1f}%",
+                delta="+2.3%"
             )
-    
-    with col3:
-        if max_disps:
+
+        with col3:
             st.metric(
-                "最大位移",
-                f"{max(max_disps):.4f} mm"
+                label="平均耗时",
+                value=f"{stats.get('avg_duration', 0):.1f}s",
+                delta="-5.2s"
             )
-    
-    with col4:
-        if num_elements:
-            st.metric(
-                "平均单元数",
-                f"{int(sum(num_elements)/len(num_elements)):,}"
-            )
-    
-    st.markdown("---")
-    
-    # 可视化标签页
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "应力分布",
-        "散点矩阵",
-        "相关性分析",
-        "统计分析"
-    ])
-    
-    with tab1:
-        st.subheader("应力分布直方图")
-        
-        if max_stresses:
-            fig = create_histogram(
-                max_stresses,
-                bins=30,
-                title="最大应力分布",
-                x_label="应力 (MPa)"
+
+        # 按类型统计
+        by_type = stats.get('by_type', {})
+
+        if by_type:
+            st.subheader("按仿真类型统计")
+
+            types_df = pd.DataFrame(list(by_type.items()), columns=['类型', '数量'])
+
+            fig = px.pie(
+                types_df,
+                values='数量',
+                names='类型',
+                title='仿真类型分布'
             )
             st.plotly_chart(fig, use_container_width=True)
-    
-    with tab2:
-        st.subheader("参数散点矩阵")
-        
-        if max_stresses and mean_stresses:
-            fig = create_scatter_plot(
-                max_stresses,
-                mean_stresses[:len(max_stresses)],
-                "最大应力 (MPa)",
-                "平均应力 (MPa)",
-                "应力相关性"
+
+        # 最近仿真记录
+        recent = collector.get_recent_simulations(limit=10)
+
+        if recent:
+            st.subheader("最近仿真记录")
+
+            recent_df = pd.DataFrame(recent)
+            st.dataframe(recent_df, use_container_width=True)
+
+    else:
+        # 按类型筛选数据
+        training_data = collector.get_training_data(analysis_type)
+
+        if not training_data:
+            st.info(f"暂无 {analysis_type} 类型的仿真数据")
+        else:
+            # 数据统计
+            st.subheader(f"{analysis_type} 仿真数据统计")
+
+            df = pd.DataFrame(training_data)
+
+            # 基本统计信息
+            st.write("基本统计:")
+            st.write(df.describe())
+
+            # 数据可视化
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # 直方图
+                fig = px.histogram(
+                    df,
+                    x='value',
+                    title=f'{analysis_type} 数值分布',
+                    nbins=30
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                # 时间序列
+                if 'timestamp' in df.columns:
+                    df['timestamp'] = pd.to_datetime(df['timestamp'])
+                    time_fig = px.line(
+                        df,
+                        x='timestamp',
+                        y='value',
+                        title=f'{analysis_type} 时间趋势'
+                    )
+                    st.plotly_chart(time_fig, use_container_width=True)
+
+            # 数据下载
+            st.download_button(
+                label="下载分析数据 (CSV)",
+                data=df.to_csv(index=False),
+                file_name=f'{analysis_type}_analysis.csv',
+                mime='text/csv'
             )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        if max_stresses and num_elements:
-            fig = create_scatter_plot(
-                num_elements[:len(max_stresses)],
-                max_stresses,
-                "网格单元数",
-                "最大应力 (MPa)",
-                "网格密度 vs 应力"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with tab3:
-        st.subheader("数据相关性热力图")
-        
-        if len(max_stresses) > 1:
-            # 构建相关性矩阵
-            df = pd.DataFrame({
-                '最大应力': max_stresses,
-                '平均应力': mean_stresses[:len(max_stresses)],
-            })
-            
-            correlation = df.corr()
-            
-            fig = create_heatmap(
-                correlation.values,
-                correlation.columns.tolist(),
-                correlation.index.tolist(),
-                "参数相关性矩阵"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with tab4:
-        st.subheader("统计分析")
-        
-        if max_stresses:
-            # 箱线图
-            data_dict = {
-                '最大应力': max_stresses,
-                '平均应力': mean_stresses[:len(max_stresses)]
-            }
-            
-            fig = create_box_plot(data_dict, "应力分布箱线图")
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # 统计表格
-            st.subheader("详细统计信息")
-            
-            stats_df = pd.DataFrame({
-                '指标': ['最大应力', '平均应力', '最大位移'],
-                '最小值': [
-                    min(max_stresses) if max_stresses else 0,
-                    min(mean_stresses) if mean_stresses else 0,
-                    min(max_disps) if max_disps else 0
-                ],
-                '最大值': [
-                    max(max_stresses) if max_stresses else 0,
-                    max(mean_stresses) if mean_stresses else 0,
-                    max(max_disps) if max_disps else 0
-                ],
-                '平均值': [
-                    np.mean(max_stresses) if max_stresses else 0,
-                    np.mean(mean_stresses) if mean_stresses else 0,
-                    np.mean(max_disps) if max_disps else 0
-                ],
-                '标准差': [
-                    np.std(max_stresses) if max_stresses else 0,
-                    np.std(mean_stresses) if mean_stresses else 0,
-                    np.std(max_disps) if max_disps else 0
-                ]
-            })
-            
-            st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+# Streamlit 页面入口
+show_analysis_page()

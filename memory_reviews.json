@@ -12,5 +12,51 @@
     "total_sessions": 0,
     "reviewed_sessions": [],
     "skipped_sessions": []
+  },
+  {
+    "review_time": "2026-01-28T12:39:50.757467",
+    "review_period_hours": 24,
+    "total_sessions": 1,
+    "reviewed_sessions": [
+      {
+        "session_id": "20260128_123947",
+        "review_time": "2026-01-28T12:39:50.757467",
+        "status": "completed",
+        "summary": "总消息数: 2; 用户消息: 1; 助手消息: 1; 时间跨度: 2026-01-28 至 2026-01-28",
+        "message_count": 2,
+        "key_topics": [
+          "hello,",
+          "message",
+          "test",
+          "this",
+          "我记住了你说:"
+        ],
+        "last_message": "我记住了你说: Hello, this is a test message"
+      }
+    ],
+    "skipped_sessions": []
+  },
+  {
+    "review_time": "2026-01-28T12:57:20.656302",
+    "review_period_hours": 24,
+    "total_sessions": 1,
+    "reviewed_sessions": [
+      {
+        "session_id": "20260128_123947",
+        "review_time": "2026-01-28T12:57:20.656302",
+        "status": "completed",
+        "summary": "总消息数: 2; 用户消息: 1; 助手消息: 1; 时间跨度: 2026-01-28 至 2026-01-28",
+        "message_count": 2,
+        "key_topics": [
+          "hello,",
+          "message",
+          "test",
+          "this",
+          "我记住了你说:"
+        ],
+        "last_message": "我记住了你说: Hello, this is a test message"
+      }
+    ],
+    "skipped_sessions": []
   }
 ]
