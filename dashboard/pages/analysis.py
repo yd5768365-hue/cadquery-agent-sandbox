@@ -10,7 +10,7 @@ if '/app' not in sys.path:
     sys.path.insert(0, '/app')
 
 from server.data_collector import SimulationDataCollector
-from dashboard.components.charts import *
+from components.charts import *
 import pandas as pd
 import numpy as np
 

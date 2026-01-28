@@ -10,7 +10,7 @@ if '/app' not in sys.path:
     sys.path.insert(0, '/app')
 
 from services.viz_service import VisualizationService
-from dashboard.components.three_d_viewer import CAE3DViewer
+from components.three_d_viewer import CAE3DViewer
 
 def show_visualize_page():
     """可视化页面"""

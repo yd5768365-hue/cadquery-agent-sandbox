@@ -13,7 +13,7 @@ from server.data_collector import SimulationDataCollector
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
-from dashboard.components.charts import *
+from components.charts import *
 
 def show_monitor_page():
     """实时监控页面"""
