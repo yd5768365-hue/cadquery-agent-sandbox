@@ -16,9 +16,9 @@ services:
     image: postgres:15-alpine
     container_name: cae_postgres
     environment:
-      POSTGRES_DB: cae_platform
-      POSTGRES_USER: cae_user
-      POSTGRES_PASSWORD: cae_pass_2024
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -139,7 +139,7 @@ services:
       context: ../.server
       dockerfile: Dockerfile
     container_name: cae_flower
-    command: sh -c "celery -A tasks flower --port=5555"
+    command: sh -c "celery -A tasks flower --port=5555 --basic-auth=admin:secure_password"
     ports:
       - "5555:5555"
     volumes:
@@ -169,8 +169,8 @@ services:
       - ../services:/app/services
       - ../test:/data
     environment:
-      - DATABASE_URL=postgresql://cae_user:cae_pass_2024@postgres:5432/cae_platform
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
       - PYTHONPATH=/app:/server:/ml:/services
     depends_on:
       - postgres

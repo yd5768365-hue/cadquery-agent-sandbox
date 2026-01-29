@@ -1,0 +1,245 @@
+{
+  "memories": {
+    "mem_20260130_011301_8f3e21a7": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:13:01.777969",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011301_8f3e21a7.json",
+      "tags": [
+        "应力集中",
+        "系数",
+        "理论"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_91d3cd45": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:13:01.829277",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011301_91d3cd45.json",
+      "tags": [
+        "定义"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_f4635292": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:13:01.831721",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011301_f4635292.json",
+      "tags": [
+        "应力集中",
+        "系数",
+        "公式"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_c4c93323": {
+      "type": "project",
+      "created_at": "2026-01-30T01:13:01.833396",
+      "file_path": "memory_storage\\project\\mem_20260130_011301_c4c93323.json",
+      "tags": [
+        "学习",
+        "应力集中",
+        "理论"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_f53d05fe": {
+      "type": "personal",
+      "created_at": "2026-01-30T01:13:01.841029",
+      "file_path": "memory_storage\\personal\\mem_20260130_011301_f53d05fe.json",
+      "tags": [
+        "偏好",
+        "学习风格",
+        "理论"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_52f945b9": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:13:01.844591",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011301_52f945b9.json",
+      "tags": [
+        "有限元",
+        "学习"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_ed0f17ae": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:13:01.847225",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011301_ed0f17ae.json",
+      "tags": [
+        "方法"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_93d73b37": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:13:01.848227",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011301_93d73b37.json",
+      "tags": [
+        "有限元",
+        "学习"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_bd942ecf": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:13:01.850747",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011301_bd942ecf.json",
+      "tags": [
+        "有限元",
+        "学习"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_d9bfac8d": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:13:01.854747",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011301_d9bfac8d.json",
+      "tags": [
+        "定义"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_6c9b1721": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:13:01.855747",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011301_6c9b1721.json",
+      "tags": [
+        "公式",
+        "定义"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011301_7af0e5d8": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:13:01.858779",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011301_7af0e5d8.json",
+      "tags": [
+        "原理"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_0ded88be": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:18:34.174345",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011834_0ded88be.json",
+      "tags": [
+        "应力集中",
+        "系数",
+        "理论"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_659f5c1b": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:18:34.265191",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011834_659f5c1b.json",
+      "tags": [
+        "定义"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_f25393ab": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:18:34.267195",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011834_f25393ab.json",
+      "tags": [
+        "应力集中",
+        "系数",
+        "公式"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_0b8232eb": {
+      "type": "project",
+      "created_at": "2026-01-30T01:18:34.270195",
+      "file_path": "memory_storage\\project\\mem_20260130_011834_0b8232eb.json",
+      "tags": [
+        "学习",
+        "应力集中",
+        "理论"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_1ee94a84": {
+      "type": "personal",
+      "created_at": "2026-01-30T01:18:34.272330",
+      "file_path": "memory_storage\\personal\\mem_20260130_011834_1ee94a84.json",
+      "tags": [
+        "偏好",
+        "学习风格",
+        "理论"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_5f06e7ae": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:18:34.280342",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011834_5f06e7ae.json",
+      "tags": [
+        "有限元",
+        "学习"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_fe56870f": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:18:34.282861",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011834_fe56870f.json",
+      "tags": [
+        "方法"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_1bdf2fc4": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:18:34.285930",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011834_1bdf2fc4.json",
+      "tags": [
+        "有限元",
+        "学习"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_7d6d197b": {
+      "type": "conversation",
+      "created_at": "2026-01-30T01:18:34.289058",
+      "file_path": "memory_storage\\conversation\\mem_20260130_011834_7d6d197b.json",
+      "tags": [
+        "有限元",
+        "学习"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_c10192c0": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:18:34.294622",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011834_c10192c0.json",
+      "tags": [
+        "定义"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_ab5954e2": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:18:34.296182",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011834_ab5954e2.json",
+      "tags": [
+        "公式",
+        "定义"
+      ],
+      "summary": ""
+    },
+    "mem_20260130_011834_7e7f979d": {
+      "type": "knowledge",
+      "created_at": "2026-01-30T01:18:34.298179",
+      "file_path": "memory_storage\\knowledge\\mem_20260130_011834_7e7f979d.json",
+      "tags": [
+        "原理"
+      ],
+      "summary": ""
+    }
+  },
+  "last_updated": "2026-01-30T01:18:34.298179"
+}

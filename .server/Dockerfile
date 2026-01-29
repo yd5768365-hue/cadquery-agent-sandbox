@@ -1,5 +1,8 @@
 FROM python:3.10-slim
 
+# 创建非 root 用户
+RUN useradd -m -u 1000 caeuser
+
 # 配置阿里云镜像源
 RUN echo "deb http://mirrors.aliyun.com/debian/ bookworm main contrib non-free non-free-firmware" > /etc/apt/sources.list && \
     echo "deb http://mirrors.aliyun.com/debian-security bookworm-security main contrib non-free non-free-firmware" >> /etc/apt/sources.list && \
@@ -10,7 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx libglu1-mesa libxrender1 libxext6 libxfixes3 \
     libxi6 libxcomposite1 libxcursor1 libxdamage1 libxrandr2 \
     libfontconfig1 libdbus-1-3 gmsh calculix-ccx \
-    vim wget git \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 Python 包
@@ -28,16 +30,20 @@ RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
     sqlalchemy
 
 #添加可视化工具
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
-    xvfb
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
     pyvista \
     vtk \
     Pillow
-    
+
 WORKDIR /app
+
+# 切换到非 root 用户
+USER caeuser
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONIOENCODING=utf-8

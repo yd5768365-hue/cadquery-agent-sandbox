@@ -1,0 +1,17 @@
+{
+  "type": "knowledge",
+  "content": "根据虚功原理，可以建立单元刚度矩阵，然后组装成总体刚度矩阵。",
+  "knowledge_type": "原理",
+  "metadata": {
+    "confidence": 0.85,
+    "importance": 1.2155
+  },
+  "tags": [
+    "原理"
+  ],
+  "source": "knowledge_extraction",
+  "created_at": "2026-01-30T01:13:01.858779",
+  "confidence": 0.85,
+  "id": "mem_20260130_011301_7af0e5d8",
+  "updated_at": "2026-01-30T01:13:01.858779"
+}

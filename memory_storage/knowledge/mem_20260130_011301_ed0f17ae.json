@@ -1,0 +1,14 @@
+{
+  "type": "knowledge",
+  "content": "是一种数值计算方法，用于求解工程中的偏微分方程。",
+  "knowledge_type": "方法",
+  "metadata": {},
+  "tags": [
+    "方法"
+  ],
+  "source": "conversation:mem_20260130_011301_52f945b9",
+  "created_at": "2026-01-30T01:13:01.847225",
+  "confidence": 1.0,
+  "id": "mem_20260130_011301_ed0f17ae",
+  "updated_at": "2026-01-30T01:13:01.847225"
+}

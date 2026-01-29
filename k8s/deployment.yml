@@ -160,6 +160,11 @@ spec:
       labels:
         app: cae-dashboard
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - name: dashboard
         image: ghcr.io/yd5768365-hue/cadquery-agent-sandbox-dashboard:latest
@@ -183,6 +188,11 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "1000m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
         livenessProbe:
           httpGet:
             path: /_stcore/health
@@ -224,6 +234,11 @@ spec:
       labels:
         app: cae-worker
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - name: worker
         image: ghcr.io/yd5768365-hue/cadquery-agent-sandbox-worker:latest
@@ -245,6 +260,11 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "2000m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -261,10 +281,15 @@ spec:
       labels:
         app: cae-flower
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - name: flower
         image: ghcr.io/yd5768365-hue/cadquery-agent-sandbox-worker:latest
-        command: ["celery", "-A", "tasks", "flower", "--port=5555"]
+        command: ["celery", "-A", "tasks", "flower", "--port=5555", "--basic-auth=admin:secure_password"]
         ports:
         - containerPort: 5555
         env:
@@ -278,6 +303,11 @@ spec:
             configMapKeyRef:
               name: cae-config
               key: CELERY_RESULT_BACKEND
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
 ---
 apiVersion: v1
 kind: Service

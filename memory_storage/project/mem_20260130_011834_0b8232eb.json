@@ -1,0 +1,20 @@
+{
+  "type": "project",
+  "event_type": "learning",
+  "description": "学习了应力集中理论，理解了Kt的计算方法",
+  "details": {
+    "topic": "应力集中",
+    "progress": "basic",
+    "next_step": "实践验证"
+  },
+  "tags": [
+    "学习",
+    "应力集中",
+    "理论"
+  ],
+  "timestamp": "2026-01-30T01:18:34.269195",
+  "version": "1.0.0",
+  "id": "mem_20260130_011834_0b8232eb",
+  "created_at": "2026-01-30T01:18:34.270195",
+  "updated_at": "2026-01-30T01:18:34.270195"
+}

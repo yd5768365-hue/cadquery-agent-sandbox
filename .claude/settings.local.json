@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(pip-audit:*)",
+      "Bash(python quick_test.py)",
+      "Bash(python local_test.py)",
+      "Bash(python memory_skill_example.py)"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "type": "knowledge",
+  "content": "基本方程为：[K]{u} = {F}，其中[K]是刚度矩阵，{u}是位移向量，{F}是载荷向量。",
+  "knowledge_type": "定义",
+  "metadata": {
+    "confidence": 0.8,
+    "importance": 1.056
+  },
+  "tags": [
+    "公式",
+    "定义"
+  ],
+  "source": "knowledge_extraction",
+  "created_at": "2026-01-30T01:13:01.855747",
+  "confidence": 0.8,
+  "id": "mem_20260130_011301_6c9b1721",
+  "updated_at": "2026-01-30T01:13:01.855747"
+}

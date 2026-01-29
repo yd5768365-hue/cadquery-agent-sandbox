@@ -1,0 +1,17 @@
+{
+  "type": "knowledge",
+  "content": "有限元分析的基本原理是将连续的结构离散为有限个简单单元的集合。",
+  "knowledge_type": "定义",
+  "metadata": {
+    "confidence": 0.8,
+    "importance": 1.056
+  },
+  "tags": [
+    "定义"
+  ],
+  "source": "knowledge_extraction",
+  "created_at": "2026-01-30T01:13:01.854747",
+  "confidence": 0.8,
+  "id": "mem_20260130_011301_d9bfac8d",
+  "updated_at": "2026-01-30T01:13:01.854747"
+}

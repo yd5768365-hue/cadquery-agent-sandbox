@@ -52,20 +52,54 @@ def send(obj):
         log(f"Send error: {e}")
 
 def get_local_path(container_path):
-    """容器路径映射到本地路径"""
+    """容器路径映射到本地路径 - 安全版本"""
+    import os
+
+    # 规范化路径
+    container_path = os.path.normpath(container_path)
+
+    # 防止路径遍历
+    if ".." in container_path:
+        raise Exception("Path traversal detected")
+
+    # 构建本地路径
     if container_path.startswith("/app/"):
         rel = container_path.replace("/app/", "").replace("/", os.sep)
-        return os.path.join(LOCAL_WORK_DIR, rel)
-    if container_path.startswith("/workspace/"):
+        local_path = os.path.abspath(os.path.join(LOCAL_WORK_DIR, rel))
+    elif container_path.startswith("/workspace/"):
         rel = container_path.replace("/workspace/", "").replace("/", os.sep)
-        return os.path.join(LOCAL_WORK_DIR, rel)
-    return os.path.join(LOCAL_WORK_DIR, os.path.basename(container_path))
+        local_path = os.path.abspath(os.path.join(LOCAL_WORK_DIR, rel))
+    else:
+        local_path = os.path.abspath(os.path.join(LOCAL_WORK_DIR, os.path.basename(container_path)))
+
+    # 验证路径是否在预期的工作目录内
+    expected_dir = os.path.abspath(LOCAL_WORK_DIR)
+    if not local_path.startswith(expected_dir):
+        raise Exception("Path traversal detected")
+
+    return local_path
+
+# 安全白名单 - 只允许执行这些命令
+ALLOWED_CMDS = ['gmsh', 'ccx', 'ls', 'mkdir', 'rm', 'cp']
 
 def is_safe(cmd):
-    """安全检查"""
-    for blocked in BLOCKED_CMDS:
-        if blocked.lower() in cmd.lower():
-            return False, f"Blocked: {blocked}"
+    """安全检查 - 使用白名单机制"""
+    # 检查是否包含允许的命令
+    contains_allowed = False
+    for allowed in ALLOWED_CMDS:
+        if f"{allowed} " in cmd.lower() or cmd.lower().startswith(allowed):
+            contains_allowed = True
+            break
+
+    if not contains_allowed:
+        return False, "Command not in allowed list"
+
+    # 检查是否包含禁止的操作
+    BLOCKED_PATTERNS = ['rm -rf /', 'format', 'del /f', '..', '&&', ';', '|', '>']
+    for pattern in BLOCKED_PATTERNS:
+        if pattern in cmd:
+            return False, f"Blocked pattern: {pattern}"
+
     return True, ""
 
 def docker_exec(cmd, workdir="/app", timeout=None):
@@ -417,19 +451,6 @@ def handle_request(req):
                     },
                     # 通用执行工具
                     {
-                        "name": "run_shell",
-                        "description": "执行任意 Shell 命令（gmsh, ccx, ls 等）",
-                        "inputSchema": {
-                            "type": "object",
-                            "properties": {
-                                "command": {"type": "string"},
-                                "working_dir": {"type": "string", "default": "/app"},
-                                "timeout": {"type": "integer", "default": 600}
-                            },
-                            "required": ["command"]
-                        }
-                    },
-                    {
                         "name": "run_python",
                         "description": "运行 Python 脚本",
                         "inputSchema": {
@@ -529,17 +550,9 @@ def handle_request(req):
                 }})
                 
             # 通用执行
-            elif name == "run_shell":
-                output, is_err = docker_exec(
-                    args["command"],
-                    args.get("working_dir", "/app"),
-                    args.get("timeout", 600)
-                )
-                send({"jsonrpc": "2.0", "id": req_id, "result": {
-                    "content": [{"type": "text", "text": output}], "isError": is_err
-                }})
-                
             elif name == "run_python":
+                # 验证脚本路径
+                script_path = get_local_path(args["script_path"])
                 cmd = f"python {args['script_path']}"
                 output, is_err = docker_exec(cmd)
                 send({"jsonrpc": "2.0", "id": req_id, "result": {
@@ -554,7 +567,7 @@ def handle_request(req):
         except Exception as e:
             log(f"Error in {name}: {e}")
             send({"jsonrpc": "2.0", "id": req_id, "error": {
-                "code": -32000, "message": str(e)
+                "code": -32000, "message": "Internal server error"
             }})
             
     elif method == "ping":

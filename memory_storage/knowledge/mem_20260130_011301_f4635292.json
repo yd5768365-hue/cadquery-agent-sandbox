@@ -1,0 +1,16 @@
+{
+  "type": "knowledge",
+  "content": "应力集中系数(Kt) = σ_max / σ_nom，其中σ_max为最大应力，σ_nom为名义应力。",
+  "knowledge_type": "公式",
+  "metadata": {},
+  "tags": [
+    "应力集中",
+    "系数",
+    "公式"
+  ],
+  "source": "conversation:mem_20260130_011301_8f3e21a7",
+  "created_at": "2026-01-30T01:13:01.831721",
+  "confidence": 1.0,
+  "id": "mem_20260130_011301_f4635292",
+  "updated_at": "2026-01-30T01:13:01.831721"
+}
