@@ -88,7 +88,9 @@ celerybeat.pid
 
 # Logs
 *.log
-logs/
+logs/*.log
+!logs/daily/
+!logs/daily/*.md
 
 # OS
 Thumbs.db
